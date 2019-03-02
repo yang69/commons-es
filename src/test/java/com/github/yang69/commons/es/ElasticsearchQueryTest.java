@@ -1,6 +1,7 @@
 package com.github.yang69.commons.es;
 
 /**
+ * @version 2019-03-02
  * @author          |   |   |
  *               ,   .-'"'=;_  ,
  *               |\.'-~`-.`-`;/|
@@ -27,7 +28,6 @@ package com.github.yang69.commons.es;
  *  .`   ``"""'''--`_)     (_'--'''"""``   `.
  * (_(_(___...--'"'`         `'"'--...___)_)_)
  *
- * @version 2018-12-16
  * Created by Yang on 2018-12-16.
  */
 public class ElasticsearchQueryTest {
@@ -35,7 +35,7 @@ public class ElasticsearchQueryTest {
         // match all query
         System.out.println("match all query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .build()
         );
         System.out.println();
@@ -43,7 +43,7 @@ public class ElasticsearchQueryTest {
         // match all query with page info
         System.out.println("match all query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .size(1)
                         .from(1)
                         .build()
@@ -53,7 +53,7 @@ public class ElasticsearchQueryTest {
         // exists query
         System.out.println("exists query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .exists("phone")
                         .build()
         );
@@ -62,7 +62,7 @@ public class ElasticsearchQueryTest {
         // not exists query
         System.out.println("not exists query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .notExists("phone")
                         .build()
         );
@@ -71,8 +71,8 @@ public class ElasticsearchQueryTest {
         // filter query
         System.out.println("filter query -->");
         System.out.println(
-                new ElasticsearchQuery()
-                        .filter("name", "yang")
+                new ElasticsearchQuery.Builder()
+                        .satisfy("name", "yang")
                         .exists("phone").build()
         );
         System.out.println();
@@ -80,7 +80,7 @@ public class ElasticsearchQueryTest {
         // range query
         System.out.println("range query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .range("age", "gt", 20, "lte", 21)
                         .build()
         );
@@ -89,7 +89,7 @@ public class ElasticsearchQueryTest {
         // not in range query
         System.out.println("not in range query -->");
         System.out.println(
-                new ElasticsearchQuery()
+                new ElasticsearchQuery.Builder()
                         .notInRange("age", "gt", 23)
                         .build()
         );
@@ -98,9 +98,9 @@ public class ElasticsearchQueryTest {
         // filter query with not
         System.out.println("filter query with not -->");
         System.out.println(
-                new ElasticsearchQuery()
-                        .filter("name", "yang")
-                        .notFilter("hobbies", "computer")
+                new ElasticsearchQuery.Builder()
+                        .satisfy("name", "yang")
+                        .exclude("hobbies", "computer")
                         .build()
         );
         System.out.println();
@@ -108,12 +108,12 @@ public class ElasticsearchQueryTest {
         // test something more complex
         System.out.println("test something more complex");
         System.out.println(
-                new ElasticsearchQuery()
-                        .filter("name", "yang")
-                        .filter("hobbies", "c")
-                        .orFilter("hobbies", new Object[]{"fiction", "book"})
-                        .orFilter("bookPrices", new Object[]{20, 35, 41})
-                        .notAny("hobbies", new String[]{"tv"})
+                new ElasticsearchQuery.Builder()
+                        .satisfy("name", "yang")
+                        .satisfy("hobbies", "c")
+                        .satisfyAny("hobbies", new Object[]{"fiction", "book"})
+                        .satisfyAny("bookPrices", new Object[]{20, 35, 41})
+                        .excludeAll("hobbies", new String[]{"tv"})
                         .range("age", "gte", 18, "lt", 60)
                         .exists("money")
                         .notExists("phone")

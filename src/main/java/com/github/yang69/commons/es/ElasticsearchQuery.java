@@ -4,6 +4,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 构造 Elasticsearch DSL 查询语句的工具类。
+ * Utils to generate DSL query string.
+ *
+ * 用法：
+ * usage:
+ *      String dslString = new ElasticsearchQuery.Builder()
+ *          .filter("name", "yang")
+ *          .notFilter("sex", "male")
+ *          .range("age", "gte", 18, "lt", 60)
+ *          .size(10)
+ *          .from(1)
+ *          .build().toString();
+ *      该语句查询满足条件
+ *      （ name 字段为 “yang"） 且 （sex 字段 不是 "male"） 且 （age 字段大于等于18小于60）
+ *      的结果，忽略最开始的1个结果，取接下来的10条结果。
+ *
+ * @version 1.1 添加了 select() 方法。
  * @author          |   |   |
  *               ,   .-'"'=;_  ,
  *               |\.'-~`-.`-`;/|
@@ -30,125 +47,186 @@ import java.util.List;
  *  .`   ``"""'''--`_)     (_'--'''"""``   `.
  * (_(_(___...--'"'`         `'"'--...___)_)_)
  *
- * @version 1.0
  * Created by Yang on 2018-12-12.
- *
- * 构造 Elasticsearch DSL 查询语句的工具类。
- * Utils to generate DSL query string.
- *
- * 用法：
- * usage:
- *      String dslString = new ElasticsearchQuery()
- *          .filter("name", "yang")
- *          .notFilter("sex", "male")
- *          .range("age", "gte", 18, "lt", 60)
- *          .size(10)
- *          .from(1)
- *          .build()
- *      该语句查询满足条件
- *      （ name 字段为 “yang"） 且 （sex 字段 不是 "male"） 且 （age 字段大于等于18小于60）
- *      的结果，忽略最开始的1个结果，取接下来的10条结果。
  */
 public class ElasticsearchQuery {
 
     private List<Object[]> filters;
-
     private List<Object[]> notFilters;
+    private String[] fields;
+    private Integer size;
+    private Integer from;
 
-    private int size;
+    private String dslString;
 
-    private int from;
+    public static class Builder {
 
-    public ElasticsearchQuery() {
-        this.filters = new ArrayList<Object[]>();
-        this.notFilters = new ArrayList<Object[]>();
-        this.size = 10;
-        this.from = 0;
-    }
+        private Integer size;
+        private Integer from;
+        private String[] fields;
+        private List<Object[]> filters;
+        private List<Object[]> notFilters;
 
-    /**
-     * 分页查询的页面大小
-     * @param size 页面大小
-     */
-    public ElasticsearchQuery size(int size) {
-        this.size = size;
-        return this;
-    }
+        public Builder() {
+            this.filters = new ArrayList<>();
+            this.notFilters = new ArrayList<>();
+        }
 
-    /**
-     * 分页查询的起始点（从0开始计数）
-     * @param from 忽略的最开始的记录数
-     */
-    public ElasticsearchQuery from(int from) {
-        this.from = from;
-        return this;
-    }
-
-    /**
-     * 选出满足条件的记录
-     * @param fieldName 待查询的字段名
-     * @param value 需满足的值
-     */
-    public ElasticsearchQuery filter(String fieldName, Object value) {
-        this.filters.add(new Object[]{TermEnum.Term, fieldName, value});
-        return this;
-    }
-
-    public ElasticsearchQuery orFilter(String fieldName, Iterable<?> values) {
-        this.filters.add(new Object[]{TermEnum.Terms, fieldName, values});
-        return this;
-    }
-
-    public ElasticsearchQuery orFilter(String fieldName, Object[] values) {
-        this.filters.add(new Object[]{TermEnum.Terms, fieldName, values});
-        return this;
-    }
-
-    public ElasticsearchQuery notAny(String fieldName, Iterable<?> values) {
-        this.notFilters.add(new Object[]{TermEnum.Terms, fieldName, values});
-        return this;
-    }
-
-    public ElasticsearchQuery notAny(String fieldName, Object[] values) {
-        this.notFilters.add(new Object[]{TermEnum.Terms, fieldName, values});
-        return this;
-    }
-
-    public ElasticsearchQuery notFilter(String fieldName, Object value) {
-        this.notFilters.add(new Object[]{TermEnum.Term, fieldName, value});
-        return this;
-    }
-
-    public ElasticsearchQuery exists(String fieldName) {
-        this.filters.add(new Object[]{TermEnum.Exists, fieldName});
-        return this;
-    }
-
-    public ElasticsearchQuery notExists(String fieldName) {
-        this.notFilters.add(new Object[]{TermEnum.Exists, fieldName});
-        return this;
-    }
-
-    public ElasticsearchQuery range(String fieldName, Object... params) {
-        if (params == null || params.length == 0) {
+        public Builder select(String... fields) {
+            this.fields = fields;
             return this;
         }
-        if ((params.length & 1) != 0) {
-            throw new IllegalArgumentException("mismatch params for range(), must be in pair");
-        }
-        this.filters.add(new Object[]{TermEnum.Range, fieldName, params});
-        return this;
-    }
 
-    public ElasticsearchQuery notInRange(String fieldName, Object... params) {
-        if (params == null || params.length == 0) {
+        /**
+         * 分页查询的页面大小
+         * @param size 页面大小
+         */
+        public Builder size(int size) {
+            this.size = size;
             return this;
         }
-        if ((params.length & 1) != 0) {
-            throw new IllegalArgumentException("mismatch params for notInRange(), must be in pair");
+
+        /**
+         * 分页查询的起始点（从0开始计数）
+         * @param from 忽略的最开始的记录数
+         */
+        public Builder from(int from) {
+            this.from = from;
+            return this;
         }
-        this.notFilters.add(new Object[]{TermEnum.Range, fieldName, params});
-        return this;
+
+        /**
+         * 选出满足条件的记录
+         * @param fieldName 待查询的字段名
+         * @param value 需满足的值
+         */
+        public Builder satisfy(String fieldName, Object value) {
+            this.filters.add(new Object[]{TermEnum.Term, fieldName, value});
+            return this;
+        }
+
+        /**
+         * 排除满足条件的记录
+         * @param fieldName 待查询的字段名
+         * @param value 满足的值
+         */
+        public Builder exclude(String fieldName, Object value) {
+            this.notFilters.add(new Object[]{TermEnum.Term, fieldName, value});
+            return this;
+        }
+
+        /**
+         * 选出满足任意条件的记录
+         * @param fieldName 待查询的字段名
+         * @param values 满足的值
+         */
+        public Builder satisfyAny(String fieldName, Iterable<?> values) {
+            this.filters.add(new Object[]{TermEnum.Terms, fieldName, values});
+            return this;
+        }
+
+        /**
+         * 选出满足任意条件的记录
+         * @param fieldName 待查询的字段名
+         * @param values 满足的值
+         */
+        public Builder satisfyAny(String fieldName, Object[] values) {
+            this.filters.add(new Object[]{TermEnum.Terms, fieldName, values});
+            return this;
+        }
+
+        /**
+         * 排除满足任意条件的记录
+         * @param fieldName 待查询的字段名
+         * @param values 满足的值
+         */
+        public Builder excludeAll(String fieldName, Iterable<?> values) {
+            this.notFilters.add(new Object[]{TermEnum.Terms, fieldName, values});
+            return this;
+        }
+
+        /**
+         * 排除满足任意条件的记录
+         * @param fieldName 待查询的字段名
+         * @param values 满足的值
+         */
+        public Builder excludeAll(String fieldName, Object[] values) {
+            this.notFilters.add(new Object[]{TermEnum.Terms, fieldName, values});
+            return this;
+        }
+
+        /**
+         * 选出存在指定字段的记录
+         * @param fieldName 字段名
+         */
+        public Builder exists(String fieldName) {
+            this.filters.add(new Object[]{TermEnum.Exists, fieldName});
+            return this;
+        }
+
+        /**
+         * 排除存在指定字段的记录
+         * @param fieldName 字段名
+         */
+        public Builder notExists(String fieldName) {
+            this.notFilters.add(new Object[]{TermEnum.Exists, fieldName});
+            return this;
+        }
+
+        /**
+         * 选出指定的字段在范围内的记录
+         * @param fieldName 字段名
+         * @param params 支持的比较符："gt", "gte", "lt", "lte"
+         */
+        public Builder range(String fieldName, Object... params) {
+            if (params == null || params.length == 0) {
+                return this;
+            }
+            if ((params.length & 1) != 0) {
+                throw new IllegalArgumentException("mismatch params for range(), must be in pair");
+            }
+            this.filters.add(new Object[]{TermEnum.Range, fieldName, params});
+            return this;
+        }
+
+        /**
+         * 选出指定的字段不在范围内的记录
+         * @param fieldName 字段名
+         * @param params 支持的比较符："gt", "gte", "lt", "lte"
+         */
+        public Builder notInRange(String fieldName, Object... params) {
+            if (params == null || params.length == 0) {
+                return this;
+            }
+            if ((params.length & 1) != 0) {
+                throw new IllegalArgumentException("mismatch params for notInRange(), must be in pair");
+            }
+            this.notFilters.add(new Object[]{TermEnum.Range, fieldName, params});
+            return this;
+        }
+
+        public ElasticsearchQuery build() {
+            return new ElasticsearchQuery(this);
+        }
+    }
+
+    private ElasticsearchQuery(Builder builder) {
+        this.filters = builder.filters;
+        this.notFilters = builder.notFilters;
+        this.fields = builder.fields;
+        this.size = builder.size;
+        this.from = builder.from;
+
+        this.dslString = generate();
+    }
+
+    @Override
+    public String toString() {
+        return dslString;
+    }
+
+    public String toDslString() {
+        return dslString;
     }
 
     /**
@@ -156,7 +234,7 @@ public class ElasticsearchQuery {
      * generate DSL string
      * @return DSL语句 | DSL string
      */
-    public String build() {
+    private String generate() {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"query\":");
         if (isEmptyQuery()) {
@@ -175,8 +253,19 @@ public class ElasticsearchQuery {
 
             sb.append("}}}}");
         }
-        sb.append(",\"size\":").append(size);
-        sb.append(",\"from\":").append(from);
+        if (fields != null && fields.length > 0) {
+            sb.append(",\"_source\":[");
+            for (String field : fields) {
+                sb.append('"').append(field).append('"').append(',');
+            }
+            sb.deleteCharAt(sb.length() - 1).append(']');
+        }
+        if (size != null) {
+            sb.append(",\"size\":").append(size);
+        }
+        if (from != null) {
+            sb.append(",\"from\":").append(from);
+        }
         sb.append("}");
         return sb.toString();
     }

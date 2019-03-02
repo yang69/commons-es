@@ -1,6 +1,7 @@
 package com.github.yang69.commons.es;
 
 /**
+ * @version 2018-12-15
  * @author          |   |   |
  *               ,   .-'"'=;_  ,
  *               |\.'-~`-.`-`;/|
@@ -27,10 +28,9 @@ package com.github.yang69.commons.es;
  *  .`   ``"""'''--`_)     (_'--'''"""``   `.
  * (_(_(___...--'"'`         `'"'--...___)_)_)
  *
- * @version 2018-12-15
  * Created by Yang on 2018-12-15.
  */
-public enum TermEnum {
+enum TermEnum {
 
     /**
      * term 语句
